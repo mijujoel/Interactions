@@ -1,0 +1,139 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; People
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+to setup-people
+
+  create-people total-population [
+    setxy random-pxcor random-pycor ; centers on patch
+    set end-time 0
+    set total-interact-time 0
+    set num-conversations 0
+    set total-external-time 0
+    set num-externals 0
+    set partner nobody
+    set shape "person"
+    set size 1
+    set status 0 ;default is potential
+    set initiator? FALSE
+    set media? FALSE
+    set memory []
+
+    ;determine mytype of individual - from innovator to laggard.
+    let mytype-prob (random 100)
+    let cumulative-prob prob-innovator
+    ifelse (mytype-prob < cumulative-prob)
+    [
+            set-innovator
+    ]
+    [
+            set cumulative-prob cumulative-prob + prob-early-adopter
+            ifelse (mytype-prob < cumulative-prob)
+            [
+                   set-early-adopter
+            ]
+            [
+                   set cumulative-prob cumulative-prob + prob-early-majority
+                   ifelse (mytype-prob < cumulative-prob)
+                   [
+                          set-early-majority
+                   ]
+                   [
+                          set cumulative-prob cumulative-prob + prob-late-majority
+                          ifelse (mytype-prob < cumulative-prob)
+                          [
+                                  set-late-majority
+                          ]
+                          [
+                                  set cumulative-prob cumulative-prob + prob-laggard
+                                  ifelse (mytype-prob < cumulative-prob)
+                                  [
+                                      set-laggard
+                                  ]
+                                  [
+                                      print (word "Adoption Group Error: Cumulative probability of " cumulative-prob " is less than 100%")
+                                  ]
+                          ]
+                 ]
+           ]
+     ]
+  ]
+end
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;These are the mytypes of people in a population.   Each has a factor by which the acceptance rate (overall) is divided
+;in order to determine how quickly the technology or idea is accepted. The innovators will have already adopted the
+;technology - either all tech1 or all tech2 or divided between them at the start of the simulation
+to set-innovator
+   set-change-agent
+   set mytype 1
+   set acceptance innovator
+   set color red
+end
+
+;To load some members of the population with the new technology.
+to set-change-agent
+   ifelse (Internal-Tech1?)
+   [
+      ifelse (Internal-Tech2?)
+      [
+         ifelse (random 100 < change-agent)
+         [
+            set-tech1
+         ]
+         [
+            set-tech2
+         ]
+      ]
+      [
+         set-tech1
+      ]
+   ]
+   [
+      if (Internal-Tech2?)
+      [
+         set-tech2
+      ]
+   ]
+
+end
+
+;These are the two technologies or ideas introduced into the population.
+;Tech-1 is the adoption - i.e., the first new technology.  Tech-2 is a disruptive technology, something that
+;comes in at a later time, but while Tech-1 is still fresh in people's minds.
+to set-tech1
+   set status 1
+   ;set size 2
+   ;set shape "triangle"
+end
+
+to set-tech2
+   set status 2
+   ; set size 2
+   ;set shape "dot"
+end
+
+
+to set-early-adopter
+   set mytype 2
+   set acceptance earlyadopter
+   set color green
+end
+
+to set-early-majority
+   set mytype 3
+   set acceptance earlymajority
+   set color cyan
+end
+
+to set-late-majority
+   set mytype 4
+   set acceptance latemajority
+   set color blue
+end
+
+to set-laggard
+   set mytype 5
+   set acceptance laggard
+   set color magenta
+end

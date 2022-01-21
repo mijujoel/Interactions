@@ -1,0 +1,223 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; RULES OF INTERACTION
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; External influence rules are described here - adoption of type-1 and of type-2
+to check-external-adoption
+  ;adoption check (Tech1)
+    ifelse ( media? = FALSE ) [
+      ;Keep track of total number of externals made
+      set externals (externals + 1)
+      set media? TRUE
+      set partner self
+      set start-time ticks
+      set end-time round( random-exponential listening-time ) + ticks
+      print (word ticks ": external influenced adoption initiated for " who " to last until " end-time)
+    ][
+      ;adoption probability based on intensity of patch with white as highest, black as lowest, and color in
+      ;between.  Then divide this value by the acceptance value for that person type
+      ifelse ticks >= end-time [
+        set media? FALSE
+        set partner nobody
+        let prob-to-adopt (([intensity] of patch-here / 100) * prob-to-adopt-mass-market-1)
+        if random-float 100 < (1.0 / acceptance) * prob-to-adopt [
+          set-tech1
+        ]
+        ;Once done with mass media, move out of the zone
+        move-away
+        set num-externals (num-externals + 1)
+        set total-external-time (end-time - start-time + total-external-time)
+        print (word ticks ": " who " of type " mytype " has finished adoption mass media session with probability of adopting " prob-to-adopt )
+      ][
+        print (word ticks ": " who " is listening to mass media presentation for tech1-type innovation")
+      ]
+    ]
+end
+
+to check-external-disruption
+  ;disruption check (Tech2) - works same way as adoption external
+    ifelse ( media? = FALSE ) [
+      ;Keep track of total number of externals made
+      set externals (externals + 1)
+      set media? TRUE
+      set partner self
+      set start-time ticks
+      set end-time round( random-exponential listening-time ) + ticks
+      print (word ticks ": external influenced disruption initiated for " who " to last until " end-time)
+    ][
+      ifelse ticks >= end-time [
+        set media? FALSE
+        set partner nobody
+        let prob-to-adopt (([intensity] of patch-here / 100) * prob-to-adopt-mass-market-2)
+        if random-float 100 < (1.0 / acceptance) * prob-to-adopt [
+          set-tech2
+        ]
+        move-away
+        set num-externals (num-externals + 1)
+        set total-external-time (end-time - start-time + total-external-time)
+        print (word ticks ": " who " of type " mytype " has finished disruption mass media session with probability of adopting " prob-to-adopt )
+      ][
+        print (word ticks ": " who " is listening to mass media presentation for tech2-type disruptive innovation")
+      ]
+    ]
+end
+
+to move
+    rt random-float 360
+    fd movement
+    setxy pxcor pycor  ;centers on patch
+end
+
+to move-away
+    rt random-float 180
+    jump int(s-adopt / 100 * max-pxcor) ;move away from media center
+    setxy pxcor pycor ;centers on patch
+end
+
+;conversations are set up here
+to initiate
+  ;partner with someone on own patch who it not already partnered
+  ifelse (any? other people-here with [partner = nobody]) [
+
+     ;Keep track of total number of contacts made
+     set contacts (contacts + 1)
+
+     ;may not actually strike up a conversation with this partner.  The contact rate is adjusted
+     ;with the "movement" parameter and the "prob-conversation" parameter.  Note also that the
+     ;user controls the length of each conversation which will also impacts contact rate.
+     ifelse (random-float 100) < prob-conversation [
+         converse
+     ][
+         print (word ticks ": no conversation initiated by " who)
+     ]
+  ][
+    print (word ticks ": no possible parters for " who)
+  ]
+end
+
+to converse
+       let friend 0
+       let me self
+
+       ;Choose one of the eligible people to partner with - may want to consider other partnering strategies
+       ;here - such as all on one's patch for a facilitator / hub or one of patch + neighborhood.  Change agents, etc.
+       set partner one-of other turtles-here with [partner = nobody]
+
+       ;Set partner's attribute to me.
+       ask partner [ set partner me ]
+
+       ;Put in memory and partner's memory if not already there
+       ifelse (member? partner memory = true)
+         [ set friend friend + 1 ]
+         [ set memory lput partner memory ]
+       ifelse (member? self [memory] of partner = true)
+         [ set friend friend + 1 ]
+         [ ask partner [ set memory lput me memory ] ]
+
+       ;This person is the initiator, automating rendering the partner to a subordinate role
+       set initiator? TRUE
+       ask partner [ set initiator? FALSE ]
+
+       ;keep track of time conversation started
+       set start-time ticks
+       ask partner [ set start-time ticks ]
+
+       ;set time to end conversation.  For future changes, might consider multiple person interactions
+       ;with some partners leaving early and not adopting technology
+       let conversation-end round((random-float conversation-length) + ticks )
+       set end-time conversation-end
+       ask partner [ set end-time conversation-end ]
+
+       ;Set patch of conversation - since xcor and ycor are real numbers, patches may not exactly
+       ;coincide with position of partners
+       ifelse (friend = 2)
+         [ ask patch-here [ set pcolor sky ]]
+         [ ifelse (friend = 1)
+            [ ask patch-here [ set pcolor blue ]]
+            [ ask patch-here [ set pcolor pink ]]
+         ]
+
+       ;keep track of conversations started in simulation and the level of acquaintance
+       set conversation-starts (conversation-starts + 1)
+       set friend-total (friend-total + friend)
+
+       print (word ticks ": conversation between ID " who " of type " mytype " with memory list " memory " and ID "
+             [who] of partner " of type " [mytype] of partner " with memory list " [memory] of partner " at level " friend " until " end-time " at [" xcor "," ycor "]")
+end
+
+to interact
+    ifelse (ticks <= end-time) [
+       ifelse (ticks > start-time) [
+         print (word ticks ": ongoing conversation between " who " and " [who] of partner)
+       ][
+         print (word ticks ": match already established between " who " and " [who] of partner)
+       ]
+    ][
+
+       ;Decide whether to adopt the new technology when the conversation comes to a close
+       ifelse status = 0 [
+         ifelse Internal-Tech1? and [status] of partner = 1 [
+           if random-float 100 < (1.0 / acceptance) * tech1-coefficient-acceptance [
+               set-tech1
+               if link-switch [ create-link-with partner]
+               print (word ticks ": ID " who " of type " mytype " with status " status " accepted partner " [who] of partner " of type " [mytype] of partner " with status " [status] of partner)
+           ]
+         ]
+         [
+               print (word ticks ": ID " who " of type " mytype " with status " status " rejected partner " [who] of partner " of type " [mytype] of partner " with status " [status] of partner)
+         ]
+         ifelse Internal-Tech2? and [status] of partner = 2 [
+             if random-float 100 < (1.0 / acceptance) * tech2-coefficient-acceptance [
+                set-tech2
+                if link-switch [ create-link-with partner ]
+               print (word ticks ": ID " who " of type " mytype " with status " status " accepted partner " [who] of partner " of type " [mytype] of partner " with status " [status] of partner)
+             ]
+         ]
+         [
+               print ( word ticks ": ID " who " of type " mytype " with status " status " rejected partner " [who] of partner " of type " [mytype] of partner " with status " [status] of partner)
+         ]
+       ]
+       [
+               print ( word ticks ": ID " who " of type " mytype " with status " status " ignored partner " [who] of partner " of type " [mytype] of partner " with status " [status] of partner)
+       ]
+
+       ;stat collection
+       set num-conversations (num-conversations + 1)
+       set total-interact-time (end-time - start-time + total-interact-time)
+       ifelse initiator? [
+          set conversation-ends (conversation-ends + 1)
+          ask patch-here [ set pcolor  original-color ]
+          print (word ticks ": initiator " who " ends conversation with " [who] of partner)
+       ][
+          print (word ticks ": recipient " who " ended conversation with initiator " [who] of partner)
+       ]
+
+       set partner nobody
+       rt random-float 360
+       jump 5 * movement
+
+    ]
+end
+
+to rethink-adoption
+    ifelse random-float 100 < prob-tech1-to-potential [
+      set-early-adopter
+      print (word ticks ": " who " reneged tech1")
+    ][
+      if Internal-Tech2? and random-float 100 < prob-tech1-to-tech2 [
+        set-tech2
+        print (word ticks ": " who " changed from tech1 to tech2 innovation")
+      ]
+    ]
+end
+
+to rethink-disruption
+    ifelse random-float 100 < prob-tech2-to-potential [
+      set-early-adopter
+      print (word ticks ": " who " reneged on tech2 back to early adopter ")
+    ][
+      if Internal-Tech1? and random-float 100 < prob-tech2-to-tech1 [
+        set-tech1
+        print (word ticks ": " who " changed back from tech2 to tech1 innovation")
+      ]
+    ]
+end

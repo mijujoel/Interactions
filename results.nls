@@ -1,0 +1,94 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; OUTPUT PROCEDURES
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;
+;;; PLOTTING PROCEDURES
+;;;
+
+to setup-histo1
+  ;Initial Histogram - don't set limits - let model autoset
+  set-current-plot "Initial Adoption Type"
+  set-histogram-num-bars 5
+  update-plot-type
+end
+
+to setup-histo2
+  ;Variable Histogram
+  set-current-plot "Category of Adopters"
+  set-histogram-num-bars 5
+  update-plot-type-current
+end
+
+to setup-histomem
+  ;Memory of individuals
+  set-current-plot "Memory"
+  set-histogram-num-bars 100
+  update-plot-mem
+end
+
+to update-plot-pop
+  ;update time series
+  let total count people
+  let t2 count people with [status = 2]
+  let t1 count people with [status = 1]
+  let potentials ( total - t2 - t1 )
+
+  set-current-plot "Populations"
+  set-current-plot-pen "Total"
+  plot total
+  set-current-plot-pen "Potentials"
+  plot potentials
+  set-current-plot-pen "Adopters"
+  plot t1
+  set-current-plot-pen "Disruptors"
+  plot t2
+
+  set-current-plot "Groups"
+  set-current-plot-pen "Innovators"
+  plot count people with [ mytype = 1 and status > 0 ]
+  set-current-plot-pen "EarlyAdopter"
+  plot count people with [ mytype = 2 and status > 0 ]
+  set-current-plot-pen "EarlyMajority"
+  plot count people with [ mytype = 3 and status > 0 ]
+  set-current-plot-pen "LateMajority"
+  plot count people with [ mytype = 4 and status > 0 ]
+  set-current-plot-pen "Laggard"
+  plot count people with [ mytype = 5 and status > 0 ]
+end
+
+to update-plot-type
+  ;update type histogram -  potentials and adopters
+  set-current-plot "Initial Adoption Type"
+  set-current-plot-pen "mytype"
+  histogram [mytype] of people
+end
+
+to update-plot-type-current
+  ;update type histogram - indicates adopters
+  set-current-plot "Category of Adopters"
+  set-current-plot-pen "adopted"
+  histogram [mytype] of people with [status > 0]
+end
+
+to update-plot-mem
+  ;update memory histogram - indicates connectivity
+  set-current-plot "Memory"
+  set-current-plot-pen "mem"
+  histogram [length memory] of people
+end
+
+;;;
+;;; MONITOR PROCEDURES
+;;;
+
+to update-monitors
+  ;reset counters for each year
+  set contacts-per-time (contacts - old-contacts)
+  set starts-per-time (conversation-starts - old-conversation-starts)
+  set ends-per-time (conversation-ends - old-conversation-ends)
+  set active-conversations (conversation-starts - conversation-ends)
+  set old-contacts contacts
+  set old-conversation-starts conversation-starts
+  set old-conversation-ends conversation-ends
+end
